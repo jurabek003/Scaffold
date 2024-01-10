@@ -1,14 +1,24 @@
+@file:Suppress("UNUSED_EXPRESSION")
+
 package uz.turgunboyevjurabek.scaffold
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.graphics.drawable.Icon
 import android.icu.number.Scale
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +38,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardElevation
 import androidx.compose.material3.ElevatedCard
@@ -40,9 +52,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -52,10 +66,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import uz.turgunboyevjurabek.scaffold.madels.Data
 import uz.turgunboyevjurabek.scaffold.ui.theme.ScaffoldTheme
 
@@ -109,9 +125,9 @@ fun MyScaffold() {
                         Icon(imageVector = Icons.Default.MoreVert, contentDescription = null)
                     }
                 },
-                modifier = Modifier
-                    .background(Color.Red)
-                    .fillMaxWidth(),
+//                modifier = Modifier
+//                    .background(Color.Red)
+//                    .fillMaxWidth(),
             )
         },
         content = {
@@ -140,9 +156,14 @@ fun MyScaffold() {
                     Data(painterResource(id = R.drawable.ic_launcher_foreground),"Moshin","Cho'tki moshina vayy"),
                     Data(painterResource(id = R.drawable.ic_launcher_background),"Moshin","Cho'tki moshina vayy"),
                 ))
-                LazyColumn{
+
+                var showDialog by remember { mutableStateOf(false) }
+
+                LazyColumn(){
                     items(list.size){
-                        ItemUI(data = list[it])
+                        ItemUI(data = list[it], onItemClick = { showDialog=true })
+
+                        if (showDialog){ CustomAlertDialog(onDismissRequest = { showDialog=false }, data = list[it]) }
                     }
                 }
             }
@@ -165,13 +186,12 @@ fun MyScaffold() {
 fun MyScaffoldPreview() {
     ScaffoldTheme {
         MyScaffold()
-
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
-fun ItemUI(data: Data) {
+fun ItemUI( data: Data,onItemClick: () -> Unit) {
 
     Card(
         modifier = Modifier
@@ -185,11 +205,12 @@ fun ItemUI(data: Data) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxSize()
+                .clickable { onItemClick }
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            Color.Red,
-                            Color.Transparent
+                            Color.DarkGray,
+                            Color.Transparent,
                         ),
                     )
                 ),
@@ -216,4 +237,56 @@ fun ItemUI(data: Data) {
             }
         }
     }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomAlertDialog( 
+    onDismissRequest: () -> Unit,
+    data: Data) {
+
+    var isVisible by remember { mutableStateOf(true) }
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f, label = "",
+        animationSpec = tween(durationMillis = 300
+        ))
+    val offsetY by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else 50.dp,
+        animationSpec = tween(durationMillis = 300), label = ""
+    )
+
+
+    AlertDialog(onDismissRequest = {onDismissRequest},
+    ){
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .offset(offsetY)
+            .alpha(alpha)
+            .background(MaterialTheme.colorScheme.background)
+        ){
+            Column(modifier = Modifier
+                .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center)
+            {
+                Image(painter =data.img, contentDescription =null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape))
+                Text(text =data.name, fontSize = 20.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.ExtraBold, color = Color.Red)
+                Text(text =data.description, fontSize = 20.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.ExtraBold, color = Color.Red)
+            }
+        }
+    }
+
+
+
+}
+@Preview(showSystemUi = true)
+@Composable
+fun DialogPreview() {
+    val data=Data(painterResource(id = R.drawable.r1),"Mushuk","Repper Mushukcha")
+
 }
